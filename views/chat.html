@@ -3,105 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Client</title>
+    <title>Private Chat</title>
     <script src="/socket.io/socket.io.js"></script>
-    <!-- <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script> -->
 </head>
 <body>
-    <h1>Socket Programming</h1>
+    <h1>Private Chat</h1>
+    
     <script>
-        const socket = io()
+        const socket = io();
         let typingTimeout;
+        const username = localStorage.getItem("username");
 
-        socket.on('connect', ()=>{
-            socket.send('Hi from Client')
-        })
+        if (!username) {
+            alert("You are not logged in! Redirecting to login page.");
+            window.location.href = "/login";
+        }
 
-        socket.on('message', (data) => {
-                console.log(`Data : ${data}`)
-        })
+        socket.emit('register_user', username);
 
         function sendMessage() {
-            const searchUser = document.getElementById('search');
-            const txtmessage = document.getElementById('message');
+            const recipient = document.getElementById('search').value.trim();
+            const message = document.getElementById('message').value.trim();
+            
+            if (recipient === "" || message === "") {
+                alert("Please enter a recipient and a message.");
+                return;
+            }
+
             const data = {
-                to:searchUser.value,
-                message: txtmessage.value,
-                datesent: Date()
-            }
-            socket.emit('chat_message', data)
-            const msg = `<p style='color:red'><b>${socket.id}:</b> ${data.message}                          ${data.datesent}<p/>`
-            const container = document.getElementById('container')
-            container.innerHTML += msg
+                from_user: username,
+                to_user: recipient,
+                message: message,
+                date_sent: new Date().toLocaleTimeString(),
+            };
+
+            socket.emit('private_message', data);
+            appendMessage("You", message, data.date_sent);
+            document.getElementById('message').value = "";
+            notTyping();
         }
 
-        function handleInput(){
-            const txtmessage = document.getElementById('message');
-            if (txtmessage.value.trim() !== "") {
-                isTyping();
-            } else {
-                notTyping();
-            }
+        function appendMessage(sender, message, time) {
+            const msg = `<p><b>${sender}:</b> ${message} <span style="font-size: 0.8em; color: gray;">(${time})</span></p>`;
+            document.getElementById('container').innerHTML += msg;
         }
 
-        function isTyping(){
-            if (!typingTimeout) {
-                const searchUser = document.getElementById('search');
+        function handleTyping() {
+            const recipient = document.getElementById('search').value.trim();
+            if (recipient === "") return;
 
-                const data = {
-                    to: searchUser.value,
-                    "username" : "aum",
-                    from:socket.id
-                }
-                socket.emit('typing', data);
-                typingTimeout = setTimeout(notTyping, 1000);
-            } else {
-               clearTimeout(typingTimeout);
-               typingTimeout = setTimeout(notTyping, 1000);
+            socket.emit('typing', { from_user: username, to: recipient });
+
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
             }
+            typingTimeout = setTimeout(notTyping, 2000);
         }
 
-        function notTyping(){
-            clearTimeout(typingTimeout)
+        function notTyping() {
+            clearTimeout(typingTimeout);
             typingTimeout = null;
-            const searchUser = document.getElementById('search');
-
-            const data = {
-                to: searchUser.value,
-            }
-            const istyping = document.getElementById('istyping')
-            istyping.innerHTML = '';
-            socket.emit('not_typing', data);
+            const recipient = document.getElementById('search').value.trim();
+            if (recipient === "") return;
+            socket.emit('not_typing', { from_user: username, to: recipient });
         }
 
-        socket.on('typing', (data)=>{
-            const msg = `<p>${data.from} is typing</p>`
-            const istyping = document.getElementById('istyping')
-            istyping.innerHTML = msg;
-        })
+        socket.on('private_message', (data) => {
+            const sender = data.from_user === username ? "You" : data.from_user;
+            
+            if (sender !== "You") {
+                appendMessage(sender, data.message, data.date_sent);
+            }
+        });
 
-        socket.on('not_typing', (data)=>{
-            console.log("in not typing")
-            const istyping = document.getElementById('istyping')
-            istyping.innerHTML = "";
-        })        
 
-        socket.on('chat_message', (data) => {
-            const msg = `<p><b>${data.senderId}:</b> ${data.message}                          ${data.datesent}<p/>`
-            const container = document.getElementById('container')
-            container.innerHTML += msg
-        })
+        socket.on('typing', (data) => {
+            document.getElementById('istyping').innerHTML = `<p>${data.from_user} is typing...</p>`;
+        });
+
+        socket.on('not_typing', () => {
+            document.getElementById('istyping').innerHTML = "";
+        });
+
+        function loadChatHistory() {
+            const recipient = document.getElementById('search').value.trim();
+            if (recipient === "") return;
+            socket.emit('get_chat_history', { from_user: username, to_user: recipient });
+        }
+
+        socket.on('chat_history', (messages) => {
+            document.getElementById('container').innerHTML = "";
+            messages.forEach(msg => {
+                const sender = msg.from_user === username ? "You" : msg.from_user;
+                appendMessage(sender, msg.message, msg.date_sent);
+            });
+        });
+
     </script>
-    
-    <a href="/group-chat">Group Chat</a>
-    </br>
-    <label for="search"></label>
-        <input type="text" id="search" name="search" placeholder="Search User" />
-        <input type="text" id="message" name="message" oninput="handleInput()" placeholder="Message" />
-    <button onclick="sendMessage()">Sent Message</button>
+
+    <a href="/group-chat">Group Chat</a><br><br>
+
+    <label for="search">Chat with:</label>
+    <input type="text" id="search" placeholder="Enter username" onblur="loadChatHistory()">
+    <input type="text" id="message" oninput="handleTyping()" placeholder="Type a message">
+    <button onclick="sendMessage()">Send</button>
+
     <h3>Chat History</h3>
-    <div id="container" name="container">
-    </div>
-    <div id="istyping" name="istyping"></div>
+    <div id="container"></div>
+    <div id="istyping"></div>
+
 </body>
 </html>
