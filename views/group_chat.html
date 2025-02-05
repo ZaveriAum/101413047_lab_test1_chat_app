@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Chat</title>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <h1>Group Chat</h1>
+    <script>
+        const socket = io()
+        socket.on('cnnect', () => {
+            console.log('Connected to server')
+            socket.send('Hi from Client')
+            const socketID = document.getElementById('socketID');
+            socketID.innerHTML = `<b>${socketID}</b>`
+        })
+
+        socket.on('message', (data) => {
+            console.log(`Data : ${data}`)
+        })
+
+        socket.on('group_message', (data) =>{
+            const container = document.getElementById('container')
+            const msg = `<p><b>${data.group_name} : ${data.senderId}:</b> ${data.message}<p/>`
+            container.innerHTML += msg
+        })
+
+        function joinGroup() {
+            const groupRadio = document.querySelector('input[name="group"]:checked');
+            const groupName = groupRadio.value
+            socket.emit('join_group', groupName)
+        }
+
+        function sendGroupMessage() {
+            const groupRadio = document.querySelector('input[name="group"]:checked');
+            const groupName = groupRadio.value
+            const txtmessage = document.getElementById('message');
+            const data = {
+                senderId: socket.id,
+                group_name: groupName,
+                message: txtmessage.value,
+                data_sent: new Date()
+            }
+            socket.emit('group_message', data)
+        }
+
+        function leaveGroup() {
+            const groupRadio = document.querySelector('input[name="group"]:checked');
+            const groupName = groupRadio.value
+            socket.emit('leave_group', groupName)
+        }
+    </script>
+<!-- devops, cloud computing, covid19, sports, nodeJS -->
+        <h1>Group Chat</h1>
+        <h4 id="socketID"></h4>
+        <input type="radio" id="group1" name="group" value="news">devops<br />
+        <input type="radio" id="group2" name="group" value="sports">cloud computing<br />
+        <input type="radio" id="group2" name="group" value="sports">covid19<br />
+        <input type="radio" id="group2" name="group" value="sports">sports<br />
+        <input type="radio" id="group2" name="group" value="sports">nodeJS<br />
+        <button onclick="joinGroup()">Join Group</button>
+        <br />
+        <input type="text" id="message" name="message" placeholder="Enter your message" />
+        <button onclick="sendGroupMessage()">Sent Message</button>
+        <h3>Chat History</h3>
+        <div id="container" name="container">
+        
+        </div>
+        <button onclick="leaveGroup()">Leave Group</button>
+</body>
+</html>

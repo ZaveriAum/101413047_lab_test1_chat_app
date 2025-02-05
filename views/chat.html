@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Client</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script> -->
+</head>
+<body>
+    <h1>Socket Programming</h1>
+    <script>
+        const socket = io()
+
+        socket.on('connect', ()=>{
+            console.log('Connected to server')
+            socket.send('Hi from Client')
+        })
+
+        socket.on('message', (data) => {
+                console.log(`Data : ${data}`)
+        })
+
+        function sendMessage() {
+            const searchUser = document.getElementById('search');
+            console.log(searchUser.value)
+            const txtmessage = document.getElementById('message');
+            const data = {
+                to:searchUser.value,
+                message: txtmessage.value,
+                datesent: Date()
+            }
+            socket.emit('chat_message', data)
+            const msg = `<p style='color:red'><b>${socket.id}:</b> ${data.message}                          ${data.datesent}<p/>`
+            const container = document.getElementById('container')
+            container.innerHTML += msg
+        }
+
+        function isTyping(){
+            const searchUser = document.getElementById('search');
+
+            const data = {
+                to: searchUser.value,
+                "username" : "aum",
+                from:socket.id
+            }
+            socket.emit('typing', data);
+        }
+
+        function notTyping(){
+            const searchUser = document.getElementById('search');
+
+            const data = {
+                to: searchUser.value,
+            }
+            socket.emit('not_typing', data);
+        }
+
+        socket.on('typing', (data)=>{
+            const msg = `<p>${data.from} is typing</p>`
+            const istyping = document.getElementById('istyping')
+            istyping.innerHTML = msg;
+        })
+
+        socket.on('not_typing', (data)=>{
+            const msg = `<p></p>`
+            const istyping = document.getElementById('istyping')
+            istyping.innerHTML = msg;
+        })        
+
+        socket.on('chat_message', (data) => {
+            console.log(JSON.stringify(data))
+            const msg = `<p><b>${data.senderId}:</b> ${data.message}                          ${data.datesent}<p/>`
+            const container = document.getElementById('container')
+            container.innerHTML += msg
+        })
+    </script>
+    
+    <a href="/group-chat">Group Chat</a>
+    </br>
+    <label for="search"></label>
+        <input type="text" id="search" name="search" placeholder="Search User" />
+        <input type="text" id="message" name="message" onpause="notTyping()" placeholder="Message" />
+    <button onclick="sendMessage()">Sent Message</button>
+    <h3>Chat History</h3>
+    <div id="container" name="container">
+    </div>
+    <div id="istyping" name="istyping"></div>
+</body>
+</html>
