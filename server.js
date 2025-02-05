@@ -4,6 +4,7 @@ const mongoose = require('mongoose')
 let authRoutes = require('./routes/authRoutes')
 const app = express()
 const PrivateMessage = require('./models/PrivateMessage')
+const GroupMessage = require('./models/GroupMessage')
 
 const server = app.listen(3000, () => {
     console.log(`Socket server running at http://localhost:3000/`)
@@ -19,6 +20,7 @@ mongoose.connect("mongodb://localhost:27017/chat_app_db")
 const io = socketio(server)
 
 let onlineUsers = {};
+let groupTypingUsers = {};
 
 // const admin = io.of('/')
 app.use('/v1/auth', authRoutes)
@@ -89,27 +91,65 @@ io.on('connection', (socket) => {
     });
 
     socket.on('group_typing', (data) => {
-        io.to(data.group_name).emit('group_typing', data)
-    })
-    
+        const { group_name, username } = data;
+
+        if (!groupTypingUsers[group_name]) {
+            groupTypingUsers[group_name] = new Set();
+        }
+
+        groupTypingUsers[group_name].add(username);
+
+        io.to(group_name).emit('group_typing', { group_name, users: [...groupTypingUsers[group_name]] });
+    });
+
     socket.on('group_not_typing', (data) => {
-        io.to(data.group_name).emit('group_not_typing', data)
-    })
+        const { group_name, username } = data;
+
+        if (groupTypingUsers[group_name]) {
+            groupTypingUsers[group_name].delete(username);
+
+            if (groupTypingUsers[group_name].size === 0) {
+                delete groupTypingUsers[group_name];
+            }
+        }
+
+        io.to(group_name).emit('group_typing', { group_name, users: [...(groupTypingUsers[group_name] || [])] });
+    });    
     
-    socket.on('group_message', (data) =>{
-        io.to(data.group_name).emit('group_message', data)
-    })
+    socket.on('group_message', async (data) => {
+        const { username, group_name, message } = data;
+        const newMessage = new GroupMessage({ from: username, room: group_name, message });
+
+        await newMessage.save();
+
+        io.to(group_name).emit('group_message', {
+            from: username,
+            message,
+            date_sent: newMessage.date_sent
+        });
+    });
     
-    socket.on('join_group', (groupName) =>{
-        socket.join(groupName)
+    socket.on('join_group',async (groupName) =>{
+        socket.join(groupName);
+        const messages = await GroupMessage.find({ room: groupName }).sort({ date_sent: 1 });
+        socket.emit('group_chat_history', messages);
     })
 
-     socket.on('leave_group', (groupName) =>{
-        socket.leave(groupName)
-    })
+    socket.on('leave_group', (groupName) => {
+        socket.leave(groupName);
+        socket.emit('clear_chat_history'); // Notify client to clear the chat history
+    });    
     
     socket.on('disconnect', () => {
         console.log(`User Disconnected: ${socket.id}`);
+
+        for (let group in groupTypingUsers) {
+            groupTypingUsers[group] = new Set([...groupTypingUsers[group]].filter(u => onlineUsers[u] !== socket.id));
+            if (groupTypingUsers[group].size === 0) {
+                delete groupTypingUsers[group];
+            }
+        }
+
         Object.keys(onlineUsers).forEach(username => {
             if (onlineUsers[username] === socket.id) delete onlineUsers[username];
         });
