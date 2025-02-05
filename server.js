@@ -33,8 +33,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on('not_typing', (data) => {
-        console.log("Here")
-        io.to(data.to).emit('typing', data)
+        io.to(data.to).emit('not_typing', data)
     })
 
     socket.on('message', (data) => {
