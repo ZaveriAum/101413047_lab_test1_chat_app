@@ -10,15 +10,15 @@
     <h1>Group Chat</h1>
     <script>
         const socket = io()
+        let typingTimeout;
+
         socket.on('cnnect', () => {
-            console.log('Connected to server')
             socket.send('Hi from Client')
             const socketID = document.getElementById('socketID');
             socketID.innerHTML = `<b>${socketID}</b>`
         })
 
         socket.on('message', (data) => {
-            console.log(`Data : ${data}`)
         })
 
         socket.on('group_message', (data) =>{
@@ -51,23 +51,75 @@
             const groupName = groupRadio.value
             socket.emit('leave_group', groupName)
         }
+
+        function handleInput(){
+            const message = document.getElementById('message');
+            if (message.value.trim() !== "") {
+                isTyping();
+            } else {
+                notTyping();
+            }
+        }
+
+        function isTyping(){
+            const groupRadio = document.querySelector('input[name="group"]:checked');
+            const groupName = groupRadio.value
+            if (!typingTimeout) {
+
+                const data = {
+                    group_name: groupName,
+                    "username" : "aum",
+                    from:socket.id
+                }
+                socket.emit('group_typing', data);
+                typingTimeout = setTimeout(notTyping, 1000);
+            } else {
+               clearTimeout(typingTimeout);
+               typingTimeout = setTimeout(notTyping, 1000);
+            }
+        }
+
+        function notTyping(){
+            clearTimeout(typingTimeout)
+            typingTimeout = null;
+            const groupRadio = document.querySelector('input[name="group"]:checked');
+            const groupName = groupRadio.value
+            const data = {
+                group_name: groupName,
+            }
+            const istyping = document.getElementById('istyping')
+            istyping.innerHTML = '';
+            socket.emit('group_not_typing', data);
+        }
+
+        socket.on('group_typing', (data)=>{
+            const msg = `<p>${data.from} is typing</p>`
+            const istyping = document.getElementById('istyping')
+            istyping.innerHTML = msg;
+        })
+
+        socket.on('group_not_typing', (data)=>{
+            const istyping = document.getElementById('istyping')
+            istyping.innerHTML = "";
+        }) 
+
     </script>
 <!-- devops, cloud computing, covid19, sports, nodeJS -->
-        <h1>Group Chat</h1>
         <h4 id="socketID"></h4>
-        <input type="radio" id="group1" name="group" value="news">devops<br />
-        <input type="radio" id="group2" name="group" value="sports">cloud computing<br />
-        <input type="radio" id="group2" name="group" value="sports">covid19<br />
+        <input type="radio" id="group1" name="group" value="devops">devops<br />
+        <input type="radio" id="group2" name="group" value="cloud computing">cloud computing<br />
+        <input type="radio" id="group2" name="group" value="covid19">covid19<br />
         <input type="radio" id="group2" name="group" value="sports">sports<br />
-        <input type="radio" id="group2" name="group" value="sports">nodeJS<br />
+        <input type="radio" id="group2" name="group" value="nodeJS">nodeJS<br />
         <button onclick="joinGroup()">Join Group</button>
         <br />
-        <input type="text" id="message" name="message" placeholder="Enter your message" />
+        <input type="text" id="message" name="message" oninput="handleInput()" placeholder="Enter your message" />
         <button onclick="sendGroupMessage()">Sent Message</button>
         <h3>Chat History</h3>
         <div id="container" name="container">
         
         </div>
+        <div id="istyping" name="istyping"></div>
         <button onclick="leaveGroup()">Leave Group</button>
 </body>
 </html>

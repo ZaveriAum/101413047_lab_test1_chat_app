@@ -35,6 +35,14 @@ io.on('connection', (socket) => {
     socket.on('not_typing', (data) => {
         io.to(data.to).emit('not_typing', data)
     })
+    
+    socket.on('group_typing', (data) => {
+        io.to(data.group_name).emit('group_typing', data)
+    })
+
+    socket.on('group_not_typing', (data) => {
+        io.to(data.group_name).emit('group_not_typing', data)
+    })
 
     socket.on('message', (data) => {
         socket.send('Hello from Server')
