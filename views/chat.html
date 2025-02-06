@@ -5,14 +5,159 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Private Chat</title>
     <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+        :root {
+            --input-focus: #2d8cf0;
+            --font-color: #323232;
+            --font-color-sub: #666;
+            --bg-color: #fff;
+            --main-color: #323232;
+            --border-radius: 5px;
+            --box-shadow: 4px 4px var(--main-color);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .logout-button {
+            
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .logout-button:active {
+            box-shadow: 0px 0px var(--main-color);
+            transform: translate(2px, 2px);
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: var(--bg-color);
+            color: var(--font-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: var(--main-color);
+            margin-bottom: 20px;
+        }
+
+        a {
+            color: var(--input-focus);
+            text-decoration: none;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--main-color);
+        }
+
+        input[type="text"] {
+            width: 300px;
+            height: 40px;
+            border-radius: var(--border-radius);
+            border: 2px solid var(--main-color);
+            background-color: var(--bg-color);
+            box-shadow: var(--box-shadow);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--font-color);
+            padding: 5px 10px;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--font-color-sub);
+            opacity: 0.8;
+        }
+
+        input[type="text"]:focus {
+            border: 2px solid var(--input-focus);
+        }
+
+        button {
+            width: 120px;
+            height: 40px;
+            border-radius: var(--border-radius);
+            border: 2px solid var(--main-color);
+            background-color: var(--bg-color);
+            box-shadow: var(--box-shadow);
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--font-color);
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        button:active {
+            box-shadow: 0px 0px var(--main-color);
+            transform: translate(2px, 2px);
+        }
+
+        #container {
+            width: 400px;
+            border: 2px solid var(--main-color);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 300px;
+            background-color: #f8f8f8; 
+            margin-bottom: 10px;
+        }
+
+        #container p {
+            margin-bottom: 5px;
+        }
+
+        #istyping {
+            color: var(--font-color-sub);
+        }
+    </style>
 </head>
 <body>
-    <h1>Private Chat</h1>
-    
+    <div class="header">
+        <h1>Private Chat</h1>
+        <button class="logout-button" onclick="logout()">Logout</button>
+    </div>    
+
     <script>
         const socket = io();
         let typingTimeout;
         const username = localStorage.getItem("username");
+
+        function logout() {
+            localStorage.removeItem('username'); 
+            window.location.href = "http://localhost:3000";
+        }
 
         if (!username) {
             alert("You are not logged in! Redirecting to login page.");

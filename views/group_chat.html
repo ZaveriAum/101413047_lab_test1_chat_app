@@ -5,13 +5,165 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Group Chat</title>
     <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --input-focus: #2d8cf0;
+            --font-color: #323232;
+            --font-color-sub: #666;
+            --bg-color: #fff;
+            --main-color: #323232;
+            --border-radius: 5px;
+            --box-shadow: 4px 4px var(--main-color);
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: var(--bg-color);
+            color: var(--font-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .logout-button {
+            
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .logout-button:active {
+            box-shadow: 0px 0px var(--main-color);
+            transform: translate(2px, 2px);
+        }
+
+        .radio-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .radio-group label {
+            margin-right: 15px;
+        }
+        h1 {
+            color: var(--main-color);
+            margin-bottom: 20px;
+        }
+
+        h4 {
+            color: var(--font-color-sub);
+            margin-bottom: 10px;
+        }
+
+        input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        label {
+            margin-right: 15px;
+            color: var(--main-color);
+        }
+
+        input[type="text"] {
+            width: 300px;
+            height: 40px;
+            border-radius: var(--border-radius);
+            border: 2px solid var(--main-color);
+            background-color: var(--bg-color);
+            box-shadow: var(--box-shadow);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--font-color);
+            padding: 5px 10px;
+            outline: none;
+            margin: 10px 0;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--font-color-sub);
+            opacity: 0.8;
+        }
+
+        input[type="text"]:focus {
+            border: 2px solid var(--input-focus);
+        }
+
+        button {
+            width: 120px;
+            height: 40px;
+            border-radius: var(--border-radius);
+            border: 2px solid var(--main-color);
+            background-color: var(--bg-color);
+            box-shadow: var(--box-shadow);
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--font-color);
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        button:active {
+            box-shadow: 0px 0px var(--main-color);
+            transform: translate(2px, 2px);
+        }
+
+        #container {
+            width: 400px;
+            border: 2px solid var(--main-color);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 300px;
+            background-color: #f8f8f8;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        #container p {
+            margin-bottom: 5px;
+        }
+
+        #istyping {
+            color: var(--font-color-sub);
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Group Chat</h1>
+    <div class="header">
+        <h1>Group Chat</h1>
+        <button class="logout-button" onclick="logout()">Logout</button>
+    </div>    
     <script>
         const socket = io();
         let typingTimeout;
         const username = localStorage.getItem('username');
+
+        function logout() {
+            localStorage.removeItem('username');
+            window.location.href = "http://localhost:3000";
+        }
 
         function joinGroup() {
             const groupRadio = document.querySelector('input[name="group"]:checked');
@@ -62,33 +214,6 @@
             }
         }
 
-        function isTyping() {
-            const groupRadio = document.querySelector('input[name="group"]:checked');
-            const groupName = groupRadio ? groupRadio.value : null;
-            if (!groupName) return;
-            
-            socket.emit('group_typing', { group_name: groupName, username: username });
-        }
-
-        function notTyping() {
-            const groupRadio = document.querySelector('input[name="group"]:checked');
-            const groupName = groupRadio ? groupRadio.value : null;
-            if (!groupName) return;
-            
-            socket.emit('group_not_typing', { group_name: groupName, username: username });
-        }
-
-        socket.on('group_typing', (data) => {
-            const isTypingDiv = document.getElementById('istyping');
-            isTypingDiv.innerHTML = `<p>${data.from} is typing...</p>`;
-        });
-
-        socket.on('group_not_typing', (data) => {
-            const isTypingDiv = document.getElementById('istyping');
-            const regex = new RegExp(`<p>${data.from} is typing\\.\\.\\.</p>`, 'g');
-            isTypingDiv.innerHTML = isTypingDiv.innerHTML.replace(regex, '');
-        });
-
         function leaveGroup() {
             const groupRadio = document.querySelector('input[name="group"]:checked');
             const groupName = groupRadio ? groupRadio.value : null;
@@ -98,24 +223,23 @@
         }
 
         socket.on('clear_chat_history', () => {
-            document.getElementById('container').innerHTML = ''; // Clear chat history
+            document.getElementById('container').innerHTML = '';
         });
 
     </script>
 
-    <h4 id="socketID"></h4>
-    <input type="radio" id="group1" name="group" value="devops">devops<br />
-    <input type="radio" id="group2" name="group" value="cloud computing">cloud computing<br />
-    <input type="radio" id="group3" name="group" value="covid19">covid19<br />
-    <input type="radio" id="group4" name="group" value="sports">sports<br />
-    <input type="radio" id="group5" name="group" value="nodeJS">nodeJS<br />
-    <button onclick="joinGroup()">Join Group</button>
-    <br />
-    <input type="text" id="message" name="message" oninput="handleInput()" placeholder="Enter your message" />
-    <button onclick="sendGroupMessage()">Send Message</button>
-    <h3>Chat History</h3>
-    <div id="container"></div>
-    <div id="istyping"></div>
-    <button onclick="leaveGroup()">Leave Group</button>
+<h4 id="socketID"></h4>
+<div class="radio-group">  <input type="radio" id="group1" name="group" value="devops" checked><label for="group1">devops</label>
+    <input type="radio" id="group2" name="group" value="cloud computing"><label for="group2">cloud computing</label>
+    <input type="radio" id="group3" name="group" value="covid19"><label for="group3">covid19</label>
+    <input type="radio" id="group4" name="group" value="sports"><label for="group4">sports</label>
+    <input type="radio" id="group5" name="group" value="nodeJS"><label for="group5">nodeJS</label>
+</div>  <button onclick="joinGroup()">Join Group</button>
+<br />
+<input type="text" id="message" name="message" oninput="handleInput()" placeholder="Enter your message" />
+<button onclick="sendGroupMessage()">Send Message</button>
+<h3>Chat History</h3>
+<div id="container"></div>
+<button onclick="leaveGroup()">Leave Group</button>
 </body>
 </html>
